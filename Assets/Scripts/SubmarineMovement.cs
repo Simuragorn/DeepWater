@@ -1,42 +1,18 @@
+using Assets.Scripts.Classes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
 using UnityEngine;
-
-[Serializable]
-public class Gear
-{
-    public int Number;
-    public float Speed;
-}
 
 public class SubmarineMovement : MonoBehaviour
 {
+    #region Config
     [SerializeField] Rigidbody2D rigidbody;
     [SerializeField] SpriteRenderer spriteRenderer;
-    [SerializeField] float gearDelay = 1f;
-    [SerializeField]
-    List<Gear> gears = new() {
-        new Gear { Number = -1, Speed = -0.5f },
-        new Gear { Number = 0, Speed = 0f },
-        new Gear { Number = 1, Speed = 1f },
-        new Gear { Number = 2, Speed = 1.5f },
-    };
-    [SerializeField] float gravityChangingSpeed = 0.7f;
-    [SerializeField] float maxGravity = 0.2f;
-    [SerializeField] float minGravity = -0.2f;
-
-    Gear currentGear;
-    int minGearNumber;
-    int maxGearNumber;
-    float gearDelayCounter = 0f;
-
-    private void Start()
-    {
-        currentGear = gears.FirstOrDefault(g => g.Number == 0);
-        minGearNumber = gears.Min(g => g.Number);
-        maxGearNumber = gears.Max(g => g.Number);
-    }
+    [SerializeField] MotorController motorController;
+    [SerializeField] BuoyancyController buoyancyController;
+    #endregion
 
     void Update()
     {
@@ -52,8 +28,7 @@ public class SubmarineMovement : MonoBehaviour
     private void HorizontalMovement()
     {
         HandleGear();
-
-        float xMovement = currentGear.Speed * Time.deltaTime;
+        float xMovement = motorController.CurrentGear.Speed * Time.deltaTime;
         if (!spriteRenderer.flipX)
         {
             xMovement *= -1;
@@ -64,34 +39,32 @@ public class SubmarineMovement : MonoBehaviour
 
     private void HandleGear()
     {
-        int gearOffset = -(int)Input.GetAxisRaw("Horizontal");
-        int newGearNumber = currentGear.Number + gearOffset;
-        newGearNumber = Mathf.Max(newGearNumber, minGearNumber);
-        newGearNumber = Mathf.Min(newGearNumber, maxGearNumber);
-        if (newGearNumber != currentGear.Number)
+        MotorGear newGear;
+        if (Input.GetButtonDown("Stop Submarine"))
         {
-            TryChangeGear(newGearNumber);
+            motorController.TrySetNeutralGear();
         }
-        gearDelayCounter -= Time.deltaTime;
-    }
-
-    private void TryChangeGear(int newGearNumber)
-    {
-        if (gearDelayCounter <= 0)
+        else
         {
-            currentGear = gears.FirstOrDefault(g => g.Number == newGearNumber);
-            gearDelayCounter = gearDelay;
-            Debug.Log($"Gear: {currentGear.Number}");
+            int gearOffset = (int)Input.GetAxisRaw("Motor Gears");
+            motorController.TryChangeGear(gearOffset);
         }
     }
 
     private void BuoyancyChanging()
     {
-        float yAxle = -Input.GetAxis("Vertical");
-        float gravityOffset = yAxle * gravityChangingSpeed * Time.deltaTime;
-        float newGravity = rigidbody.gravityScale + gravityOffset;
-        newGravity = Mathf.Max(newGravity, minGravity);
-        newGravity = Mathf.Min(newGravity, maxGravity);
-        rigidbody.gravityScale = newGravity;
+        BuoyancyGear newGear;
+        if (Input.GetButtonDown("Stop Submarine"))
+        {
+            buoyancyController.TrySetNeutralGear();
+        }
+        else
+        {
+            int gearOffset = (int)Input.GetAxisRaw("Buoyancy Gears");
+            buoyancyController.TryChangeGear(gearOffset);
+        }
+
+        rigidbody.gravityScale = buoyancyController.CurrentGear.Buoyancy;
     }
+
 }
